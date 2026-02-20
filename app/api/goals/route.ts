@@ -1,0 +1,71 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { db, goals } from "@/lib/db";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+
+const GoalsSchema = z.object({
+  targetCalories: z.number().min(0).optional(),
+  targetProtein: z.number().min(0).optional(),
+  targetCarbs: z.number().min(0).optional(),
+  targetFat: z.number().min(0).optional(),
+  targetFiber: z.number().min(0).optional(),
+  targetWeight: z.number().min(0).optional(),
+  targetLifts: z.record(z.string(), z.number()).optional(),
+});
+
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const goal = await db.query.goals.findFirst({
+    where: eq(goals.userId, session.user.id),
+  });
+
+  return NextResponse.json({ goals: goal ?? null });
+}
+
+export async function PUT(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await req.json().catch(() => null);
+  const parsed = GoalsSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  }
+
+  const userId = session.user.id;
+  const existing = await db.query.goals.findFirst({
+    where: eq(goals.userId, userId),
+  });
+
+  if (existing) {
+    const { targetLifts, ...rest } = parsed.data;
+    const [updated] = await db
+      .update(goals)
+      .set({
+        ...rest,
+        ...(targetLifts !== undefined ? { targetLifts: targetLifts as Record<string, number> } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(goals.userId, userId))
+      .returning();
+    return NextResponse.json({ goals: updated });
+  } else {
+    const { targetLifts, ...rest } = parsed.data;
+    const [created] = await db
+      .insert(goals)
+      .values({
+        userId,
+        ...rest,
+        ...(targetLifts !== undefined ? { targetLifts: targetLifts as Record<string, number> } : {}),
+      })
+      .returning();
+    return NextResponse.json({ goals: created });
+  }
+}

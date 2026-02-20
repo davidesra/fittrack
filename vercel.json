@@ -1,0 +1,20 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "regions": ["iad1"],
+  "env": {
+    "DATABASE_URL": "@database-url",
+    "AUTH_SECRET": "@auth-secret",
+    "AUTH_GOOGLE_ID": "@auth-google-id",
+    "AUTH_GOOGLE_SECRET": "@auth-google-secret",
+    "ANTHROPIC_API_KEY": "@anthropic-api-key",
+    "CLOUDINARY_URL": "@cloudinary-url",
+    "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME": "@cloudinary-cloud-name",
+    "CLOUDINARY_API_KEY": "@cloudinary-api-key",
+    "CLOUDINARY_API_SECRET": "@cloudinary-api-secret",
+    "GARMIN_CLIENT_ID": "@garmin-client-id",
+    "GARMIN_CLIENT_SECRET": "@garmin-client-secret"
+  }
+}
