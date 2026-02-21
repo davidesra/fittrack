@@ -4,8 +4,9 @@ import { eq, and, desc } from "drizzle-orm";
 import { todayString, formatDate } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { MacroBar } from "@/components/charts/macro-progress-bar";
-import { NutritionTimelineChart } from "@/components/charts/nutrition-timeline-chart";
+import { NutritionChartWrapper } from "@/components/charts/nutrition-chart-wrapper";
 import { MealLogFormWrapper } from "@/components/nutrition/meal-log-form-wrapper";
+import { DeleteMealButton } from "@/components/nutrition/delete-meal-button";
 import { Flame, Utensils } from "lucide-react";
 
 export const revalidate = 0;
@@ -21,11 +22,11 @@ export default async function NutritionPage() {
     with: { meals: { orderBy: [desc(meals.loggedAt)] } },
   });
 
-  // Last 30 days for chart
+  // Last 90 days for chart (client filters down to 7d/30d/90d)
   const recentLogs = await db.query.nutritionLogs.findMany({
     where: eq(nutritionLogs.userId, userId),
     orderBy: [desc(nutritionLogs.date)],
-    limit: 30,
+    limit: 90,
   });
 
   const userGoals = await db.query.goals.findFirst({
@@ -150,13 +151,16 @@ export default async function NutritionPage() {
                           {meal.mealType}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-semibold text-white">
-                          {Math.round(meal.calories ?? 0)} kcal
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {Math.round(meal.protein ?? 0)}p · {Math.round(meal.carbs ?? 0)}c · {Math.round(meal.fat ?? 0)}f
-                        </p>
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-white">
+                            {Math.round(meal.calories ?? 0)} kcal
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {Math.round(meal.protein ?? 0)}p · {Math.round(meal.carbs ?? 0)}c · {Math.round(meal.fat ?? 0)}f
+                          </p>
+                        </div>
+                        <DeleteMealButton mealId={meal.id} />
                       </div>
                     </div>
                   ))}
@@ -165,17 +169,13 @@ export default async function NutritionPage() {
             </Card>
           )}
 
-          {/* 30-day timeline */}
+          {/* Trend chart */}
           <Card>
             <CardHeader>
-              <CardTitle>30-Day Trend</CardTitle>
+              <CardTitle>Trend</CardTitle>
             </CardHeader>
             <CardContent>
-              <NutritionTimelineChart
-                data={chartData}
-                calGoal={g.calories}
-                activeMetric="calories"
-              />
+              <NutritionChartWrapper data={chartData} calGoal={g.calories} />
             </CardContent>
           </Card>
         </div>

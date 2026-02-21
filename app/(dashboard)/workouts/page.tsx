@@ -1,11 +1,12 @@
 import { auth } from "@/lib/auth";
-import { db, workouts } from "@/lib/db";
+import { db, workouts, goals } from "@/lib/db";
 import { eq, desc } from "drizzle-orm";
 import { formatDate } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { WorkoutLogFormWrapper } from "@/components/workouts/workout-log-form-wrapper";
 import { Badge } from "@/components/ui/badge";
 import { WorkoutChartWrapper } from "@/components/workouts/workout-chart-wrapper";
+import { DeleteWorkoutButton } from "@/components/workouts/delete-workout-button";
 import { Dumbbell, Trophy, Flame, Clock } from "lucide-react";
 
 export const revalidate = 0;
@@ -14,12 +15,15 @@ export default async function WorkoutsPage() {
   const session = await auth();
   const userId = session!.user.id;
 
-  const recentWorkouts = await db.query.workouts.findMany({
-    where: eq(workouts.userId, userId),
-    orderBy: [desc(workouts.date)],
-    limit: 20,
-    with: { exercises: true },
-  });
+  const [recentWorkouts, userGoals] = await Promise.all([
+    db.query.workouts.findMany({
+      where: eq(workouts.userId, userId),
+      orderBy: [desc(workouts.date)],
+      limit: 20,
+      with: { exercises: true },
+    }),
+    db.query.goals.findFirst({ where: eq(goals.userId, userId) }),
+  ]);
 
   const totalWorkouts = recentWorkouts.length;
   const totalCalsBurned = recentWorkouts.reduce(
@@ -105,7 +109,10 @@ export default async function WorkoutsPage() {
                 <CardTitle>Strength Progression</CardTitle>
               </CardHeader>
               <CardContent>
-                <WorkoutChartWrapper exercises={topExercises} />
+                <WorkoutChartWrapper
+                  exercises={topExercises}
+                  targetLifts={userGoals?.targetLifts ?? undefined}
+                />
               </CardContent>
             </Card>
           )}
@@ -141,16 +148,19 @@ export default async function WorkoutsPage() {
                           {formatDate(w.date)} · {w.activityType}
                         </p>
                       </div>
-                      <div className="text-right text-xs text-gray-500 space-y-0.5">
-                        {w.durationMinutes && (
-                          <p className="flex items-center gap-1 justify-end">
-                            <Clock className="w-3 h-3" />
-                            {w.durationMinutes}m
-                          </p>
-                        )}
-                        {w.exercises && w.exercises.length > 0 && (
-                          <p>{w.exercises.length} exercises</p>
-                        )}
+                      <div className="flex items-center gap-2">
+                        <div className="text-right text-xs text-gray-500 space-y-0.5">
+                          {w.durationMinutes && (
+                            <p className="flex items-center gap-1 justify-end">
+                              <Clock className="w-3 h-3" />
+                              {w.durationMinutes}m
+                            </p>
+                          )}
+                          {w.exercises && w.exercises.length > 0 && (
+                            <p>{w.exercises.length} exercises</p>
+                          )}
+                        </div>
+                        <DeleteWorkoutButton workoutId={w.id} />
                       </div>
                     </div>
                   ))}

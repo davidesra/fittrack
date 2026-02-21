@@ -11,11 +11,21 @@ import {
   BarChart2,
   LogOut,
   Target,
+  X,
+  LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useSidebar } from "./sidebar-context";
 
 const nav = [
+  {
+    section: "Overview",
+    icon: LayoutDashboard,
+    color: "text-indigo-400",
+    bg: "bg-indigo-400/10",
+    links: [{ label: "Dashboard", href: "/dashboard" }],
+  },
   {
     section: "Nutrition",
     icon: Utensils,
@@ -46,28 +56,26 @@ const nav = [
       { label: "AI Analysis", href: "/photos/analysis" },
     ],
   },
+  {
+    section: "Goals",
+    icon: Target,
+    color: "text-yellow-400",
+    bg: "bg-yellow-400/10",
+    links: [{ label: "My Goals", href: "/goals" }],
+  },
 ];
 
-export default function Sidebar() {
+function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { data: session } = useSession();
 
   return (
-    <aside className="w-60 flex-shrink-0 h-screen sticky top-0 flex flex-col border-r border-[#2a2a32] bg-[#111114]">
-      {/* Brand */}
-      <div className="flex items-center gap-2.5 px-5 py-5 border-b border-[#2a2a32]">
-        <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
-          <Activity className="w-4.5 h-4.5 text-white" />
-        </div>
-        <span className="font-bold text-white text-lg">FitTrack</span>
-      </div>
-
+    <div className="flex flex-col h-full">
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
         {nav.map(({ section, icon: Icon, color, bg, links }) => (
           <div key={section}>
-            {/* Section header */}
-            <div className={cn("flex items-center gap-2 px-2 mb-2")}>
+            <div className="flex items-center gap-2 px-2 mb-2">
               <div className={cn("w-6 h-6 rounded-md flex items-center justify-center", bg)}>
                 <Icon className={cn("w-3.5 h-3.5", color)} />
               </div>
@@ -76,12 +84,12 @@ export default function Sidebar() {
               </span>
             </div>
 
-            {/* Links */}
             <div className="space-y-0.5 pl-2">
               {links.map(({ label, href }) => (
                 <Link
                   key={href}
                   href={href}
+                  onClick={onNavigate}
                   className={cn(
                     "flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
                     pathname === href
@@ -89,7 +97,7 @@ export default function Sidebar() {
                       : "text-gray-400 hover:text-gray-200 hover:bg-white/5"
                   )}
                 >
-                  {label === "AI Analysis" || label === "AI Analysis" ? (
+                  {label === "AI Analysis" ? (
                     <BarChart2 className="w-3.5 h-3.5 opacity-60" />
                   ) : (
                     <Target className="w-3.5 h-3.5 opacity-60" />
@@ -120,9 +128,7 @@ export default function Sidebar() {
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">
-                {session.user.name}
-              </p>
+              <p className="text-sm font-medium text-white truncate">{session.user.name}</p>
               <p className="text-xs text-gray-500 truncate">{session.user.email}</p>
             </div>
             <button
@@ -135,6 +141,59 @@ export default function Sidebar() {
           </div>
         </div>
       )}
-    </aside>
+    </div>
+  );
+}
+
+export default function Sidebar() {
+  const { isOpen, close } = useSidebar();
+
+  return (
+    <>
+      {/* Desktop sidebar — always visible on lg+ */}
+      <aside className="hidden lg:flex w-60 flex-shrink-0 h-screen sticky top-0 flex-col border-r border-[#2a2a32] bg-[#111114]">
+        {/* Brand */}
+        <div className="flex items-center gap-2.5 px-5 py-5 border-b border-[#2a2a32]">
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
+            <Activity className="w-4 h-4 text-white" />
+          </div>
+          <span className="font-bold text-white text-lg">FitTrack</span>
+        </div>
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
+          onClick={close}
+        />
+      )}
+
+      {/* Mobile drawer */}
+      <aside
+        className={cn(
+          "lg:hidden fixed left-0 top-0 z-50 h-full w-72 bg-[#111114] border-r border-[#2a2a32] flex flex-col transition-transform duration-300",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        {/* Drawer header */}
+        <div className="flex items-center justify-between px-5 py-5 border-b border-[#2a2a32]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
+              <Activity className="w-4 h-4 text-white" />
+            </div>
+            <span className="font-bold text-white text-lg">FitTrack</span>
+          </div>
+          <button
+            onClick={close}
+            className="p-1.5 text-gray-500 hover:text-gray-300 transition-colors rounded-lg hover:bg-white/5"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <SidebarContent onNavigate={close} />
+      </aside>
+    </>
   );
 }

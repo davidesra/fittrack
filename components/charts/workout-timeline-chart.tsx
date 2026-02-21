@@ -8,8 +8,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ReferenceDot,
-  Legend,
+  ReferenceLine,
 } from "recharts";
 import { formatShortDate } from "@/lib/utils";
 
@@ -26,6 +25,7 @@ interface WorkoutTimelineChartProps {
   data: ExerciseDataPoint[];
   exerciseName: string;
   metric?: "weightKg" | "volume";
+  goalWeightKg?: number;
 }
 
 interface CustomDotProps {
@@ -50,6 +50,7 @@ export function WorkoutTimelineChart({
   data,
   exerciseName,
   metric = "weightKg",
+  goalWeightKg,
 }: WorkoutTimelineChartProps) {
   const formatted = data.map((d) => ({
     ...d,
@@ -89,6 +90,20 @@ export function WorkoutTimelineChart({
               label,
             ]}
           />
+          {goalWeightKg !== undefined && metric === "weightKg" && (
+            <ReferenceLine
+              y={goalWeightKg}
+              stroke="#f59e0b"
+              strokeDasharray="4 4"
+              strokeOpacity={0.7}
+              label={{
+                value: `Goal ${goalWeightKg}kg`,
+                fill: "#f59e0b",
+                fontSize: 10,
+                position: "insideTopRight",
+              }}
+            />
+          )}
           <Line
             type="monotone"
             dataKey="displayValue"

@@ -14,15 +14,23 @@ interface ExerciseData {
 
 interface WorkoutChartWrapperProps {
   exercises: { name: string; data: ExerciseData[] }[];
+  targetLifts?: Record<string, number>;
 }
 
-export function WorkoutChartWrapper({ exercises }: WorkoutChartWrapperProps) {
+export function WorkoutChartWrapper({ exercises, targetLifts }: WorkoutChartWrapperProps) {
   const [activeExercise, setActiveExercise] = useState(exercises[0]?.name ?? "");
   const [metric, setMetric] = useState<"weightKg" | "volume">("weightKg");
 
   const current = exercises.find((e) => e.name === activeExercise);
 
   if (!current) return null;
+
+  // Case-insensitive goal lookup
+  const goalWeightKg = targetLifts
+    ? Object.entries(targetLifts).find(
+        ([name]) => name.toLowerCase() === activeExercise.toLowerCase()
+      )?.[1]
+    : undefined;
 
   return (
     <div className="space-y-4">
@@ -62,6 +70,7 @@ export function WorkoutChartWrapper({ exercises }: WorkoutChartWrapperProps) {
         data={current.data}
         exerciseName={activeExercise}
         metric={metric}
+        goalWeightKg={goalWeightKg}
       />
     </div>
   );
