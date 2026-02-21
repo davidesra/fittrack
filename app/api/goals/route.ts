@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db, goals } from "@/lib/db";
+import { db, goals, users } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -20,11 +20,18 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const goal = await db.query.goals.findFirst({
-    where: eq(goals.userId, session.user.id),
-  });
+  const [goal, user] = await Promise.all([
+    db.query.goals.findFirst({ where: eq(goals.userId, session.user.id) }),
+    db.query.users.findFirst({
+      where: eq(users.id, session.user.id),
+      columns: { garminAccessToken: true },
+    }),
+  ]);
 
-  return NextResponse.json({ goals: goal ?? null });
+  return NextResponse.json({
+    goals: goal ?? null,
+    garminConnected: !!user?.garminAccessToken,
+  });
 }
 
 export async function PUT(req: NextRequest) {

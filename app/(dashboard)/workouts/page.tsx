@@ -2,12 +2,13 @@ import { auth } from "@/lib/auth";
 import { db, workouts, goals } from "@/lib/db";
 import { eq, desc } from "drizzle-orm";
 import { formatDate } from "@/lib/utils";
+import { subDays, parseISO, startOfWeek, format } from "date-fns";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { WorkoutLogFormWrapper } from "@/components/workouts/workout-log-form-wrapper";
 import { Badge } from "@/components/ui/badge";
 import { WorkoutChartWrapper } from "@/components/workouts/workout-chart-wrapper";
 import { DeleteWorkoutButton } from "@/components/workouts/delete-workout-button";
-import { Dumbbell, Trophy, Flame, Clock } from "lucide-react";
+import { Dumbbell, Trophy, Flame, Clock, CalendarDays } from "lucide-react";
 
 export const revalidate = 0;
 
@@ -33,6 +34,21 @@ export default async function WorkoutsPage() {
   const prs = recentWorkouts.flatMap((w) =>
     w.exercises?.filter((e) => e.isPR) ?? []
   );
+
+  // Weekly frequency: distinct weeks with at least one workout over the last 8 weeks
+  const eightWeeksAgo = subDays(new Date(), 56);
+  const recentEightWeeks = recentWorkouts.filter(
+    (w) => parseISO(w.date) >= eightWeeksAgo
+  );
+  const distinctWeeks = new Set(
+    recentEightWeeks.map((w) =>
+      format(startOfWeek(parseISO(w.date), { weekStartsOn: 1 }), "yyyy-MM-dd")
+    )
+  );
+  const sessionsPerWeek =
+    distinctWeeks.size > 0
+      ? (recentEightWeeks.length / 8).toFixed(1)
+      : "0.0";
 
   // Build exercise history for chart (group by exercise name)
   const exerciseHistory: Record<string, { date: string; weightKg: number; volume: number; isPR: boolean; reps: number; sets: number }[]> = {};
@@ -73,11 +89,12 @@ export default async function WorkoutsPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: "Logged", value: totalWorkouts, icon: Dumbbell, color: "text-blue-400" },
           { label: "Cals Burned", value: Math.round(totalCalsBurned), icon: Flame, color: "text-orange-400" },
           { label: "PRs Set", value: prs.length, icon: Trophy, color: "text-yellow-400" },
+          { label: "Wk Freq", value: sessionsPerWeek, icon: CalendarDays, color: "text-purple-400" },
         ].map(({ label, value, icon: Icon, color }) => (
           <Card key={label} className="flex flex-col items-center py-5 gap-1">
             <Icon className={`w-5 h-5 ${color}`} />

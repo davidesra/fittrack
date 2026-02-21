@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Plus, Trash2, Target, Save, Check, Flame, Dumbbell, Scale } from "lucide-react";
+import { Plus, Trash2, Save, Check, Flame, Dumbbell, Scale, Watch, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 
 interface TargetLift {
   exercise: string;
@@ -12,10 +13,17 @@ interface TargetLift {
 }
 
 export default function GoalsPage() {
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Garmin state
+  const [garminConnected, setGarminConnected] = useState(false);
+  const [garminSyncing, setGarminSyncing] = useState(false);
+  const [garminMessage, setGarminMessage] = useState<string | null>(null);
+  const [garminError, setGarminError] = useState<string | null>(null);
 
   // Nutrition goals
   const [calories, setCalories] = useState("2000");
@@ -33,7 +41,7 @@ export default function GoalsPage() {
   useEffect(() => {
     fetch("/api/goals")
       .then((r) => r.json())
-      .then(({ goals }) => {
+      .then(({ goals, garminConnected: gc }) => {
         if (goals) {
           setCalories(String(goals.targetCalories ?? 2000));
           setProtein(String(goals.targetProtein ?? 150));
@@ -49,10 +57,17 @@ export default function GoalsPage() {
             );
           }
         }
+        setGarminConnected(!!gc);
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, []);
+
+    // Handle redirect params from Garmin OAuth callback
+    const gc = searchParams.get("garmin");
+    const ge = searchParams.get("garmin_error");
+    if (gc === "connected") setGarminMessage("Garmin connected successfully!");
+    if (ge) setGarminError(decodeURIComponent(ge));
+  }, [searchParams]);
 
   function addLift() {
     setLifts((prev) => [...prev, { exercise: "", weightKg: "" }]);
@@ -104,6 +119,22 @@ export default function GoalsPage() {
     setTimeout(() => setSaved(false), 3000);
   }
 
+  async function syncGarmin() {
+    setGarminSyncing(true);
+    setGarminMessage(null);
+    setGarminError(null);
+    try {
+      const res = await fetch("/api/workouts/sync-garmin", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Sync failed");
+      setGarminMessage(data.message ?? `Synced ${data.synced} activities`);
+    } catch (err) {
+      setGarminError(err instanceof Error ? err.message : "Sync failed");
+    } finally {
+      setGarminSyncing(false);
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-6 max-w-2xl mx-auto space-y-4">
@@ -127,6 +158,72 @@ export default function GoalsPage() {
       {error && (
         <p className="text-sm text-red-400 bg-red-500/10 px-4 py-2.5 rounded-xl">{error}</p>
       )}
+
+      {/* Garmin Connect */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Watch className="w-4 h-4 text-teal-400" />
+            <CardTitle>Garmin Connect</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {garminMessage && (
+            <div className="flex items-center gap-2 text-sm text-emerald-400 bg-emerald-500/10 px-3 py-2 rounded-lg">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              {garminMessage}
+            </div>
+          )}
+          {garminError && (
+            <div className="flex items-center gap-2 text-sm text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {garminError}
+            </div>
+          )}
+
+          {garminConnected ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-emerald-400">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Garmin account connected</span>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={syncGarmin}
+                  loading={garminSyncing}
+                  variant="secondary"
+                  className="flex-1"
+                >
+                  {garminSyncing ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Syncing…</>
+                  ) : (
+                    "Sync Last 30 Days"
+                  )}
+                </Button>
+                <a
+                  href="/api/auth/garmin/request"
+                  className="px-4 py-2 text-sm text-gray-500 hover:text-gray-300 border border-[#2a2a32] rounded-lg transition-colors"
+                >
+                  Reconnect
+                </a>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm text-gray-500">
+                Connect your Garmin device to automatically sync workouts and activities.
+              </p>
+              <a
+                href="/api/auth/garmin/request"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white text-sm font-medium rounded-lg transition-colors"
+              >
+                <Watch className="w-4 h-4" />
+                Connect Garmin
+              </a>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Nutrition goals */}
       <Card>
