@@ -78,33 +78,35 @@ lib/
 ### Infrastructure
 | Item | Status | Notes |
 |------|--------|-------|
-| GitHub repo | ✅ | `https://github.com/davidesra/fittrack.git` |
+| GitHub repo | ✅ | `https://github.com/davidesra/fittrack.git` — pushed |
 | Neon DB | ✅ | `DATABASE_URL` set, schema pushed |
-| .env.local | ✅ | All keys present: `DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL`, `AUTH_GOOGLE_ID/SECRET`, `ANTHROPIC_API_KEY`, `CLOUDINARY_URL/KEY/SECRET`, `GARMIN_CLIENT_ID/SECRET/REDIRECT_URI` |
-| Vercel link | ❌ | `vercel link` was never run — not deployed |
+| .env.local | ✅ | All keys present |
+| Vercel link | ❌ | Needs `npx vercel login` then `npx vercel link` (requires interactive browser login) |
 
 ### Features vs Spec
 
 #### Nutrition (/nutrition)
 | Feature | Status | Notes |
 |---------|--------|-------|
-| Text meal logging | ✅ | Claude estimates macros from text description |
+| Text meal logging | ✅ | Claude estimates macros from text |
 | Photo meal logging | ✅ | Claude vision identifies food + macros |
 | Daily totals vs goals | ✅ | Calorie ring + macro progress bars |
-| Calorie/macro chart | ✅ | 30-day Recharts trend with goal line |
-| Weekly/monthly toggle | ❌ | Fixed 30-day window only |
-| AI analysis (insights + 4-week plan) | ✅ | Streaming via SSE, explicitly prompts for 4-week plan |
+| Calorie/macro chart + period toggle | ✅ | 7D / 30D / 90D + Calories / Protein / Carbs / Fat toggles; weekly aggregation for 90D |
+| AI analysis (insights + 4-week plan) | ✅ | Streaming SSE, prompts for 4-week plan |
+| Delete meals | ✅ | Trash button on each meal row; recalculates daily totals |
+| loading.tsx / error.tsx | ✅ | Added for all sections |
 
 #### Workouts (/workouts)
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Manual logging (sets/reps/weight/effort) | ✅ | Full form with multi-exercise support |
-| Garmin sync | ⚠️ | API route exists; `lib/garmin.ts` is a stub — `fetchGarminActivities` returns `[]`, `exchangeGarminTokens` throws. OAuth 1.0a not implemented. |
+| Garmin sync | ⚠️ | API route exists; `lib/garmin.ts` is stub — OAuth 1.0a not implemented |
 | Garmin OAuth connect UI | ❌ | No `/api/auth/garmin/*` routes, no connect button |
 | PR tracking | ✅ | Flagged per exercise, shown with badge |
-| Calories burned tracking | ✅ | Shown in stats row |
-| Strength progression charts | ✅ | Top 3 exercises by frequency |
+| Strength progression charts | ✅ | Top 3 exercises; goal lines from targetLifts |
+| Goal lines on workout charts | ✅ | Dashed amber ReferenceLine when targetLift matches exercise name |
 | Weekly frequency metric | ❌ | Not tracked or displayed |
+| Delete workouts | ✅ | Trash button on each workout row; cascades to exercises |
 | AI analysis (training plan) | ✅ | Streaming, prompts for 4-week periodized plan |
 
 #### Body Photos (/photos)
@@ -112,31 +114,33 @@ lib/
 |---------|--------|-------|
 | Upload with date/weight/note | ✅ | Click-to-upload, Cloudinary hosted |
 | Photo timeline grid | ✅ | Sorted by date, hover overlays |
-| Side-by-side comparison | ✅ | Select any 2 photos, renders side by side |
+| Side-by-side comparison | ✅ | Select any 2 photos, side-by-side view |
 | AI analysis (vision + stats) | ✅ | Sends photo URLs + user stats to Claude vision |
+
+#### Goals (/goals)
+| Feature | Status | Notes |
+|---------|--------|-------|
+| Goals UI page | ✅ | Set calories, macros, target weight, target lifts |
+| Goals API | ✅ | GET + PUT, Zod-validated, upserts |
+| Goal lines on charts | ✅ | Calorie goal on nutrition chart; lift goals on workout charts |
 
 #### Shared / Cross-cutting
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Auth (Google OAuth) | ✅ | NextAuth v5 |
-| DB schema + migrations | ✅ | Drizzle, all tables present |
-| Sidebar with Log + Analysis tabs | ✅ | All 3 sections |
-| Goals API | ✅ | GET + PUT, Zod-validated |
-| Goals UI page | ❌ | No `/goals` page — users can't set goals from the UI |
-| Dashboard home/overview | ❌ | Root redirects directly to `/nutrition` |
-| Recharts goal lines on charts | ✅ | Nutrition chart shows calorie goal line |
-| Goal lines on workout charts | ❌ | Target lifts not shown on strength charts |
-| Mobile navigation | ❌ | Sidebar is desktop-only; no mobile nav |
-| Edit/delete meals or workouts | ❌ | Not implemented |
+| DB schema | ✅ | Drizzle, all tables present |
+| Sidebar (5 sections) | ✅ | Dashboard, Nutrition, Workouts, Body Photos, Goals |
+| Mobile sidebar drawer | ✅ | Hamburger + backdrop + slide-in drawer (< lg) |
+| Dashboard home | ✅ | `/dashboard` — today's calories, recent workouts, latest photo, goals snapshot |
+| loading.tsx per section | ✅ | All 5 dashboard sections |
+| error.tsx per section | ✅ | All 5 dashboard sections |
 | Date filter / search | ❌ | Not implemented |
-| Error boundaries (error.tsx) | ❌ | No error.tsx files |
-| Suspense / loading states | ❌ | No loading.tsx files |
 | Tests | ❌ | Playwright installed, zero test files |
-| Vercel deployment | ❌ | Not linked, never deployed |
+| Vercel deployment | ❌ | Not linked — needs interactive `vercel login` |
+| Garmin OAuth | ❌ | OAuth 1.0a not implemented; `lib/garmin.ts` is a stub |
 
-### Priority Gaps to Close
-1. **Vercel deploy** — run `npx vercel link` and connect to GitHub
-2. **Goals UI** — create `/app/(dashboard)/goals/page.tsx` so users can set targets
-3. **Garmin OAuth** — implement OAuth 1.0a flow (`oauth-1.0a` package) + `/api/auth/garmin/request` and `/api/auth/garmin/callback` routes + connect button in settings
-4. **Mobile nav** — add hamburger/drawer or bottom nav for mobile screens
-5. **Edit/delete** — at minimum for meals; workouts secondarily
+### Remaining Gaps
+1. **Vercel deploy** — run `npx vercel login` (opens browser) then `npx vercel link --project fittrack`; add env vars via Vercel dashboard
+2. **Garmin OAuth** — install `oauth-1.0a` + `crypto`, implement `/api/auth/garmin/request` and `/api/auth/garmin/callback`, add Connect button to goals/settings page
+3. **Weekly training frequency** — calculate sessions per week in workouts page stats row
+4. **Tests** — write Playwright e2e tests for auth flow, log meal, log workout
