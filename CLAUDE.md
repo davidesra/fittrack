@@ -73,7 +73,7 @@ lib/
 - `exercises` — exercise entries per workout, tracks PRs + volume
 - `bodyPhotos` — Cloudinary-hosted body progress photos with optional weight
 
-## Current Status (as of 2026-02-20)
+## Current Status (as of 2026-02-21)
 
 ### Infrastructure
 | Item | Status | Notes |
@@ -81,7 +81,8 @@ lib/
 | GitHub repo | ✅ | `https://github.com/davidesra/fittrack.git` — pushed |
 | Neon DB | ✅ | `DATABASE_URL` set, schema pushed |
 | .env.local | ✅ | All keys present |
-| Vercel link | ❌ | Needs `npx vercel login` then `npx vercel link` (requires interactive browser login) |
+| Vercel deploy | ✅ | Live at `https://fittrack-liard.vercel.app` — all 13 env vars set, `NEXTAUTH_URL` points to production |
+| Google OAuth redirect | ⚠️ | Must add `https://fittrack-liard.vercel.app/api/auth/callback/google` to Google Cloud Console authorized redirect URIs |
 
 ### Features vs Spec
 
@@ -136,11 +137,12 @@ lib/
 | error.tsx per section | ✅ | All 5 dashboard sections |
 | Date filter / search | ❌ | Not implemented |
 | Tests | ❌ | Playwright installed, zero test files |
-| Vercel deployment | ❌ | Not linked — needs interactive `vercel login` |
+| Vercel deployment | ✅ | Live at `https://fittrack-liard.vercel.app`; project `prj_e5iApBDmXkagmpH2X2hxgCMeQeid` |
 | Garmin OAuth | ❌ | OAuth 1.0a not implemented; `lib/garmin.ts` is a stub |
 
 ### Remaining Gaps
-1. **Vercel deploy** — run `npx vercel login` (opens browser) then `npx vercel link --project fittrack`; add env vars via Vercel dashboard
-2. **Garmin OAuth** — install `oauth-1.0a` + `crypto`, implement `/api/auth/garmin/request` and `/api/auth/garmin/callback`, add Connect button to goals/settings page
-3. **Weekly training frequency** — calculate sessions per week in workouts page stats row
+1. **Google OAuth redirect URI** — add `https://fittrack-liard.vercel.app/api/auth/callback/google` to authorized redirect URIs in [Google Cloud Console](https://console.cloud.google.com) → APIs & Services → Credentials → OAuth 2.0 Client ID (manual — requires Google login)
+2. **GitHub auto-deploy** — connect repo in Vercel dashboard: Settings → Git → Connect Repository (optional; can still `vercel --prod --yes` manually)
+3. **Garmin OAuth** — install `oauth-1.0a` + `crypto`, implement `/api/auth/garmin/request` and `/api/auth/garmin/callback`, add Connect button to goals/settings page
+4. **Weekly training frequency** — calculate sessions per week in workouts page stats row
 4. **Tests** — write Playwright e2e tests for auth flow, log meal, log workout
