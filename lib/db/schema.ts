@@ -20,6 +20,9 @@ export const users = pgTable("users", {
   emailVerified: timestamp("email_verified", { mode: "date" }),
   image: text("image"),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  // Credentials auth
+  username: text("username").unique(),
+  password: text("password"), // scrypt hash: "salt:hash"
   // Garmin OAuth tokens (stored server-side, never exposed to client)
   garminAccessToken: text("garmin_access_token"),
   garminRefreshToken: text("garmin_refresh_token"),
