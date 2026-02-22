@@ -5,12 +5,38 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Plus, Trash2, Save, Check, Flame, Dumbbell, Scale, Watch, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Save,
+  Check,
+  Flame,
+  Dumbbell,
+  Scale,
+  Watch,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  Repeat2,
+} from "lucide-react";
+
+type RoutineKey = "ppl" | "5day" | "custom";
 
 interface TargetLift {
   exercise: string;
   weightKg: string;
 }
+
+const ROUTINE_OPTIONS: { key: RoutineKey; label: string; sub: string; sessions: string }[] = [
+  { key: "ppl", label: "Push / Pull / Legs", sub: "3 sessions", sessions: "Push → Pull → Legs" },
+  {
+    key: "5day",
+    label: "5-Day Split",
+    sub: "5 sessions",
+    sessions: "Arms → Shoulders → Back → Chest → Legs",
+  },
+  { key: "custom", label: "Custom", sub: "You define", sessions: "" },
+];
 
 export default function GoalsPage() {
   const searchParams = useSearchParams();
@@ -38,6 +64,10 @@ export default function GoalsPage() {
   // Lift goals
   const [lifts, setLifts] = useState<TargetLift[]>([{ exercise: "", weightKg: "" }]);
 
+  // Training routine
+  const [trainingRoutine, setTrainingRoutine] = useState<RoutineKey>("ppl");
+  const [customSessions, setCustomSessions] = useState<string[]>(["Session 1"]);
+
   useEffect(() => {
     fetch("/api/goals")
       .then((r) => r.json())
@@ -56,13 +86,16 @@ export default function GoalsPage() {
               )
             );
           }
+          setTrainingRoutine((goals.trainingRoutine ?? "ppl") as RoutineKey);
+          if (goals.customRoutine?.length) {
+            setCustomSessions(goals.customRoutine as string[]);
+          }
         }
         setGarminConnected(!!gc);
         setLoading(false);
       })
       .catch(() => setLoading(false));
 
-    // Handle redirect params from Garmin OAuth callback
     const gc = searchParams.get("garmin");
     const ge = searchParams.get("garmin_error");
     if (gc === "connected") setGarminMessage("Garmin connected successfully!");
@@ -83,6 +116,18 @@ export default function GoalsPage() {
     );
   }
 
+  function addSession() {
+    setCustomSessions((prev) => [...prev, ""]);
+  }
+
+  function removeSession(i: number) {
+    setCustomSessions((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  function updateSession(i: number, value: string) {
+    setCustomSessions((prev) => prev.map((s, idx) => (idx === i ? value : s)));
+  }
+
   async function save() {
     setSaving(true);
     setError(null);
@@ -95,6 +140,8 @@ export default function GoalsPage() {
       }
     });
 
+    const filteredSessions = customSessions.filter((s) => s.trim());
+
     const res = await fetch("/api/goals", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -106,6 +153,11 @@ export default function GoalsPage() {
         targetFiber: parseFloat(fiber) || 30,
         targetWeight: targetWeight ? parseFloat(targetWeight) : undefined,
         targetLifts: Object.keys(targetLifts).length > 0 ? targetLifts : undefined,
+        trainingRoutine,
+        customRoutine:
+          trainingRoutine === "custom" && filteredSessions.length > 0
+            ? filteredSessions
+            : undefined,
       }),
     });
 
@@ -195,7 +247,9 @@ export default function GoalsPage() {
                   className="flex-1"
                 >
                   {garminSyncing ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Syncing…</>
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Syncing…
+                    </>
                   ) : (
                     "Sync Last 30 Days"
                   )}
@@ -220,6 +274,88 @@ export default function GoalsPage() {
                 <Watch className="w-4 h-4" />
                 Connect Garmin
               </a>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Training Routine */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Repeat2 className="w-4 h-4 text-violet-400" />
+            <CardTitle>Training Routine</CardTitle>
+          </div>
+          <p className="text-xs text-gray-600 mt-1">
+            Choose your weekly split — the dashboard suggests your next session based on this.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-3 gap-2">
+            {ROUTINE_OPTIONS.map(({ key, label, sub }) => {
+              const selected = trainingRoutine === key;
+              return (
+                <button
+                  key={key}
+                  onClick={() => setTrainingRoutine(key)}
+                  className={`p-3 rounded-xl border text-left transition-colors ${
+                    selected
+                      ? "border-indigo-500 bg-indigo-500/10"
+                      : "border-[#2a2a32] hover:border-[#3a3a42]"
+                  }`}
+                >
+                  <p
+                    className={`text-xs font-semibold leading-tight ${
+                      selected ? "text-indigo-400" : "text-white"
+                    }`}
+                  >
+                    {label}
+                  </p>
+                  <p className="text-xs text-gray-600 mt-0.5">{sub}</p>
+                </button>
+              );
+            })}
+          </div>
+
+          {trainingRoutine !== "custom" && (
+            <div className="text-xs text-gray-500 bg-[#111114] rounded-lg px-3 py-2">
+              <span className="text-gray-600">Rotation: </span>
+              {ROUTINE_OPTIONS.find((r) => r.key === trainingRoutine)?.sessions}
+            </div>
+          )}
+
+          {trainingRoutine === "custom" && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-gray-500">Define your sessions in order:</p>
+                {customSessions.length < 7 && (
+                  <button
+                    onClick={addSession}
+                    className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-colors"
+                  >
+                    <Plus className="w-3 h-3" /> Add session
+                  </button>
+                )}
+              </div>
+              {customSessions.map((session, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-xs text-gray-600 w-4 flex-shrink-0">{i + 1}.</span>
+                  <Input
+                    placeholder={`Session ${i + 1} (e.g. Chest & Triceps)`}
+                    value={session}
+                    onChange={(e) => updateSession(i, e.target.value)}
+                    className="flex-1"
+                  />
+                  {customSessions.length > 1 && (
+                    <button
+                      onClick={() => removeSession(i)}
+                      className="p-1.5 text-gray-600 hover:text-red-400 transition-colors flex-shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

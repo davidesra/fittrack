@@ -380,6 +380,31 @@ async function seed() {
 
   console.log("  ✓ Inserted 8 workouts with progressive overload");
 
+  // ── Body photos with weight data: 7 entries over 14 days ──────────────────
+  // Using Cloudinary demo placeholder (image won't display but weight data is real)
+  const weightEntries = [
+    { daysBack: 14, weightKg: 84.2 }, // Feb 7
+    { daysBack: 12, weightKg: 83.9 }, // Feb 9
+    { daysBack: 10, weightKg: 83.5 }, // Feb 11
+    { daysBack: 8,  weightKg: 83.7 }, // Feb 13 — slight uptick (normal fluctuation)
+    { daysBack: 6,  weightKg: 83.1 }, // Feb 15
+    { daysBack: 3,  weightKg: 82.8 }, // Feb 18
+    { daysBack: 0,  weightKg: 82.4 }, // Feb 21
+  ];
+
+  await db.insert(schema.bodyPhotos).values(
+    weightEntries.map(({ daysBack, weightKg }) => ({
+      userId: testUser.id,
+      date: daysAgo(daysBack),
+      cloudinaryPublicId: "fittrack/placeholder",
+      cloudinaryUrl: "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+      weightKg,
+      note: `Weight check-in: ${weightKg} kg`,
+    }))
+  );
+
+  console.log("  ✓ Inserted 7 weight data points (84.2 kg → 82.4 kg)");
+
   // ── User 2: david / David ──────────────────────────────────────────────────
   await db
     .insert(schema.users)

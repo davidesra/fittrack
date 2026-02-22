@@ -90,6 +90,9 @@ export const goals = pgTable("goals", {
   targetWeight: real("target_weight"),                 // kg
   // Workout goals (JSON for flexibility: e.g. {benchPress: 100, squat: 120})
   targetLifts: jsonb("target_lifts").$type<Record<string, number>>(),
+  // Training routine preference
+  trainingRoutine: text("training_routine").default("ppl"), // "ppl" | "5day" | "custom"
+  customRoutine: jsonb("custom_routine").$type<string[]>(), // ordered session names for custom split
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });
 

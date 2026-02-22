@@ -12,6 +12,8 @@ const GoalsSchema = z.object({
   targetFiber: z.number().min(0).optional(),
   targetWeight: z.number().min(0).optional(),
   targetLifts: z.record(z.string(), z.number()).optional(),
+  trainingRoutine: z.enum(["ppl", "5day", "custom"]).optional(),
+  customRoutine: z.array(z.string()).optional(),
 });
 
 export async function GET() {
@@ -51,27 +53,23 @@ export async function PUT(req: NextRequest) {
     where: eq(goals.userId, userId),
   });
 
+  const { targetLifts, customRoutine, ...rest } = parsed.data;
+  const jsonbFields = {
+    ...(targetLifts !== undefined ? { targetLifts: targetLifts as Record<string, number> } : {}),
+    ...(customRoutine !== undefined ? { customRoutine } : {}),
+  };
+
   if (existing) {
-    const { targetLifts, ...rest } = parsed.data;
     const [updated] = await db
       .update(goals)
-      .set({
-        ...rest,
-        ...(targetLifts !== undefined ? { targetLifts: targetLifts as Record<string, number> } : {}),
-        updatedAt: new Date(),
-      })
+      .set({ ...rest, ...jsonbFields, updatedAt: new Date() })
       .where(eq(goals.userId, userId))
       .returning();
     return NextResponse.json({ goals: updated });
   } else {
-    const { targetLifts, ...rest } = parsed.data;
     const [created] = await db
       .insert(goals)
-      .values({
-        userId,
-        ...rest,
-        ...(targetLifts !== undefined ? { targetLifts: targetLifts as Record<string, number> } : {}),
-      })
+      .values({ userId, ...rest, ...jsonbFields })
       .returning();
     return NextResponse.json({ goals: created });
   }
