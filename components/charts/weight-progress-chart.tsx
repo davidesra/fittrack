@@ -68,7 +68,7 @@ export function WeightProgressChart({ data, targetWeight }: WeightProgressChartP
             borderRadius: 8,
             fontSize: 12,
           }}
-          formatter={(val: number) => [`${val.toFixed(1)} kg`, "Weight"]}
+          formatter={(val: number | undefined) => [`${(val ?? 0).toFixed(1)} kg`, "Weight"]}
         />
         {targetWeight !== undefined && (
           <ReferenceLine
